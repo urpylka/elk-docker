@@ -1,0 +1,11 @@
+https://hub.docker.com/_/elasticsearch
+https://hub.docker.com/_/kibana
+https://hub.docker.com/_/logstash
+https://stackoverflow.com/questions/44002643/how-to-use-the-official-docker-elasticsearch-container
+https://habr.com/ru/post/282866/
+https://techexpert.tips/ru/elasticsearch-ru/elasticsearch-докер-установка-на-ubuntu-linux/
+https://jinnabalu.medium.com/elasticsearch-on-docker-b7854f116062
+https://elk-docker.readthedocs.io
+https://medium.com/analytics-vidhya/elk-stack-in-docker-6285ec1ac1aa
+https://www.elastic.co/guide/en/elastic-stack-get-started/current/get-started-docker.html
+https://github.com/deviantony/docker-elk
