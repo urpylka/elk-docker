@@ -66,51 +66,6 @@ RUN DEBIAN_FRONTEND=noninteractive \
     && mkdir -p /var/log/elasticsearch ${ES_PATH_CONF} ${ES_PATH_CONF}/scripts /var/lib/elasticsearch ${ES_PATH_BACKUP} \
     && chown -R elasticsearch:elasticsearch ${ES_HOME} /var/log/elasticsearch /var/lib/elasticsearch ${ES_PATH_CONF} ${ES_PATH_BACKUP}
 
-
-### install Logstash
-
-ENV \
-    LOGSTASH_VERSION=${ELK_VERSION} \
-    LOGSTASH_HOME=/opt/logstash
-
-ENV \
-    LOGSTASH_PACKAGE=logstash-${LOGSTASH_VERSION}-linux-${ARCH}.tar.gz \
-    LOGSTASH_GID=992 \
-    LOGSTASH_UID=992 \
-    LOGSTASH_PATH_CONF=/etc/logstash \
-    LOGSTASH_PATH_SETTINGS=${LOGSTASH_HOME}/config
-
-RUN mkdir ${LOGSTASH_HOME} \
-    && curl -O https://artifacts.elastic.co/downloads/logstash/${LOGSTASH_PACKAGE} \
-    && tar xzf ${LOGSTASH_PACKAGE} -C ${LOGSTASH_HOME} --strip-components=1 \
-    && rm -f ${LOGSTASH_PACKAGE} \
-    && groupadd -r logstash -g ${LOGSTASH_GID} \
-    && useradd -r -s /usr/sbin/nologin -M -d ${LOGSTASH_HOME} -c "Logstash service user" -u ${LOGSTASH_UID} -g logstash logstash \
-    && mkdir -p /var/log/logstash ${LOGSTASH_PATH_CONF}/conf.d \
-    && chown -R logstash:logstash ${LOGSTASH_HOME} /var/log/logstash ${LOGSTASH_PATH_CONF}
-
-
-### install Kibana
-
-ENV \
-    KIBANA_VERSION=${ELK_BASE_VERSION} \
-    KIBANA_HOME=/opt/kibana
-
-ENV \
-    KIBANA_PACKAGE=kibana-${KIBANA_VERSION}-linux-${ARCH}.tar.gz \
-    KIBANA_GID=993 \
-    KIBANA_UID=993
-
-RUN mkdir ${KIBANA_HOME} \
-    && curl -O https://artifacts.elastic.co/downloads/kibana/${KIBANA_PACKAGE} \
-    && tar xzf ${KIBANA_PACKAGE} -C ${KIBANA_HOME} --strip-components=1 \
-    && rm -f ${KIBANA_PACKAGE} \
-    && groupadd -r kibana -g ${KIBANA_GID} \
-    && useradd -r -s /usr/sbin/nologin -d ${KIBANA_HOME} -c "Kibana service user" -u ${KIBANA_UID} -g kibana kibana \
-    && mkdir -p /var/log/kibana \
-    && chown -R kibana:kibana ${KIBANA_HOME} /var/log/kibana
-
-
 ###############################################################################
 #                              START-UP SCRIPTS
 ###############################################################################
@@ -120,20 +75,6 @@ RUN mkdir ${KIBANA_HOME} \
 ADD ./elasticsearch-init /etc/init.d/elasticsearch
 RUN sed -i -e 's#^ES_HOME=$#ES_HOME='$ES_HOME'#' /etc/init.d/elasticsearch \
     && chmod +x /etc/init.d/elasticsearch
-
-
-### Logstash
-
-ADD ./logstash-init /etc/init.d/logstash
-RUN sed -i -e 's#^LS_HOME=$#LS_HOME='$LOGSTASH_HOME'#' /etc/init.d/logstash \
-    && chmod +x /etc/init.d/logstash
-
-
-### Kibana
-
-ADD ./kibana-init /etc/init.d/kibana
-RUN sed -i -e 's#^KIBANA_HOME=$#KIBANA_HOME='$KIBANA_HOME'#' /etc/init.d/kibana \
-    && chmod +x /etc/init.d/kibana
 
 
 ###############################################################################
@@ -149,43 +90,10 @@ RUN cp ${ES_HOME}/config/log4j2.properties ${ES_HOME}/config/jvm.options \
     && chown -R elasticsearch:elasticsearch ${ES_PATH_CONF} \
     && chmod -R +r ${ES_PATH_CONF}
 
-
-### configure Logstash
-
-# certs/keys for Beats and Lumberjack input
-RUN mkdir -p /etc/pki/tls/{certs,private}
-ADD ./logstash-beats.crt /etc/pki/tls/certs/logstash-beats.crt
-ADD ./logstash-beats.key /etc/pki/tls/private/logstash-beats.key
-
-# pipelines
-ADD pipelines.yml ${LOGSTASH_PATH_SETTINGS}/pipelines.yml
-
-# filters
-ADD ./logstash-conf/*.conf ${LOGSTASH_PATH_CONF}/conf.d/
-
-# patterns
-ADD ./nginx.pattern ${LOGSTASH_HOME}/patterns/nginx
-RUN chown -R logstash:logstash ${LOGSTASH_HOME}/patterns
-
-# Fix permissions
-RUN chmod -R +r ${LOGSTASH_PATH_CONF} ${LOGSTASH_PATH_SETTINGS} \
-    && chown -R logstash:logstash ${LOGSTASH_PATH_SETTINGS}
-
-
 ### configure logrotate
 
 ADD ./elasticsearch-logrotate /etc/logrotate.d/elasticsearch
-ADD ./logstash-logrotate /etc/logrotate.d/logstash
-ADD ./kibana-logrotate /etc/logrotate.d/kibana
-RUN chmod 644 /etc/logrotate.d/elasticsearch \
-    && chmod 644 /etc/logrotate.d/logstash \
-    && chmod 644 /etc/logrotate.d/kibana
-
-
-### configure Kibana
-
-ADD ./kibana.yml ${KIBANA_HOME}/config/kibana.yml
-
+RUN chmod 644 /etc/logrotate.d/elasticsearch
 
 ###############################################################################
 #                                   START
